@@ -15,7 +15,7 @@ def deleteMatches():
     """Remove all the match records from the database."""
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("DELETE * FROM matches")
+    cursor.execute("DELETE * FROM matches;")
     conn.close()
 
 
@@ -23,15 +23,17 @@ def deletePlayers():
     """Remove all the player records from the database."""
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("DELETE * FROM players")
+    cursor.execute("DELETE * FROM players;")
     conn.close()
 
 def countPlayers():
     """Returns the number of players currently registered."""
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("SELECT count(*) as num FROM players")
+    cursor.execute("SELECT count(*) as num FROM players;")
+    result = int(cursor.fetchall()[0][0])
     conn.close()
+    return result
 
 
 def registerPlayer(name):
@@ -45,7 +47,8 @@ def registerPlayer(name):
     """
     conn = connect()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO players VALUES (name)")
+    query = "INSERT INTO players VALUES (%s);"
+    cursor.execute(query, name)
     conn.commit()
     conn.close()
 
@@ -63,6 +66,14 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+    conn = connect()
+    cursor = conn.cursor()
+    query = "SELECT id, name, wins, matches FROM players, scoresByPlayers, matchesByPlayers where scores.pid = players.id and matchesByPlayers.id = players.id order by wins desc;"
+    cursor.execute(query)
+    result = cursor.fetechall()
+    conn.close()
+    return result
+
 
 
 def reportMatch(winner, loser):
@@ -72,6 +83,17 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
+    conn = connect()
+    cursor = conn.cursor()
+    if int(winner) < int(loser):
+        mid = cursor.execute("SELECT mid from tmatches where a_id = winner and b_id = loser;")
+    else:
+        mid = cursor.execute("SELECT mid from tmatches where a_id = loser and b_id = winner;")
+    cursor.execute("INSERT into scores VALUES (winner, mid, 1);")
+    cursor.commit()
+    cursor.execute("INSERT into scores VALUES (loser, mid, 0);")
+    cursor.commit()
+    conn.close()
 
 
 def swissPairings():
@@ -89,5 +111,14 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+    pairings = []
+    player = playerStandings()
+    if len(player) < 2:
+        raise KeyError("Not enough players")
+    for i in range(0, len(player), 2):
+        pairings.append(players[i][0], players[i][1], players[i+1][0], players[i+1][1])
+
+    return pairings
+
 
 
